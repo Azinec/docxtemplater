@@ -201,40 +201,54 @@ function getAllIndexes(fullText, delimiters) {
 	var start = delimiters.start,
 		end = delimiters.end;
 
+	var offset = -1;
 	while (true) {
-		var startOffset = -1;
-		var endOffset = -1;
 
-		const conditionIndex = fullText.match(/{IF(.+?)(GOTO|THEN)((.+?)(ELSE.+?)?)((?=\})|\n|$|(?=IF))}/);
+		var startOffset = fullText.indexOf(start, offset + 1);
+		var endOffset = fullText.indexOf(end, offset + 1);
 
-		const variableIndex = fullText.match(/(\[!?[a-zA-Z-_/|]+[\w]*\])/);
+		if (start === '{' || end === '}') {
 
-		// For conditions
-		if(conditionIndex) {
-			startOffset = conditionIndex.index;
-			endOffset = conditionIndex.index + conditionIndex[0].length - 1;
-			fullText = fullText.substring(0, startOffset) + REPLACMENT_SYMBOL + fullText.substring(startOffset + 1);
+			var position = null;
+			var len = void 0;
 
-			indexes.push({ offset: startOffset, position: "start", length: start.length });
-			indexes.push({ offset: endOffset, position: "end", length: end.length });
+			var compareResult = compareOffsets(startOffset, endOffset);
+			if (compareResult === EQUAL) {
+				return indexes;
+			}
+			if (compareResult === END) {
+				offset = endOffset;
+				position = "end";
+				len = end.length;
+			}
+			if (compareResult === START) {
+				offset = startOffset;
+				position = "start";
+				len = start.length;
+			}
+
+			indexes.push({ offset: offset, position: position, length: len });
+		} else {
+			startOffset = -1;
+			endOffset = -1;
+
+			const variableIndex = fullText.match(/(\[!?[a-zA-Z-_/ ,.|]+[\w]*\])/);
+
+			if (variableIndex) {
+				startOffset = variableIndex.index;
+				endOffset = variableIndex.index + variableIndex[0].length - 1;
+				fullText = fullText.substring(0, startOffset) + REPLACMENT_SYMBOL + fullText.substring(startOffset + 1);
+
+				indexes.push({ offset: startOffset, position: "start", length: start.length });
+				indexes.push({ offset: endOffset, position: "end", length: end.length });
+			}
+
+			var compareVariableResult = compareOffsets(startOffset, endOffset);
+
+			if (compareVariableResult === EQUAL) {
+				return indexes;
+			}
 		}
-
-		// For variables
-		if (variableIndex) {
-			startOffset = variableIndex.index;
-			endOffset = variableIndex.index + variableIndex[0].length - 1;
-
-			fullText = fullText.substring(0, startOffset) + REPLACMENT_SYMBOL + fullText.substring(startOffset + 1);
-
-			indexes.push({ offset: startOffset, position: "start", length: start.length });
-			indexes.push({ offset: endOffset, position: "end", length: end.length });
-		}
-
-		var compareResult = compareOffsets(startOffset, endOffset);
-		if (compareResult === EQUAL) {
-			return indexes;
-		}
-
 
 	}
 }
